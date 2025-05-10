@@ -1,14 +1,8 @@
-cmake
-opencv-python
-pyyaml
 streamlit
 pandas
 numpy
 opencv-python
-dlib
-Pillow
+mediapipe
 plotly
 streamlit-option-menu
-
-#Fork of face_recognition using prebuild dlib library instead
-face_recognition @ git+https://github.com/thetoby9944/face_recognition
+Pillow
