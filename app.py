@@ -1,17 +1,3 @@
-import os
-
-# Dynamically create the config file
-os.makedirs('.streamlit', exist_ok=True)
-with open('.streamlit/config.toml', 'w') as f:
-    f.write("""
-[theme]
-base="light"
-primaryColor="#F63366"
-backgroundColor="#FFFFFF"
-secondaryBackgroundColor="#F0F2F6"
-textColor="#000000"
-""")
-
 import streamlit as st
 import pandas as pd
 import numpy as np
