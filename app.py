@@ -907,7 +907,10 @@ def register_patient_page():
             clinic_number = st.text_input("Clinic Number")
             first_name = st.text_input("First Name")
             last_name = st.text_input("Last Name")
-            dob = st.date_input("Date of Birth")
+            dob = st.date_input("Date of Birth", 
+                     min_value=datetime.date(1900, 1, 1),
+                      max_value=datetime.date.today(),
+                      value=datetime.date.today())
             gender = st.selectbox("Gender", ["Male", "Female", "Other"])
             blood_group = st.selectbox("Blood Group", ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"])
             
