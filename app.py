@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import cv2
-import face_recognition
+import mediapipe as mp
 import os
 import pickle
 import datetime
@@ -16,6 +16,42 @@ import time
 import plotly.express as px
 import plotly.graph_objects as go
 from streamlit_option_menu import option_menu
+
+# Add this new code after the imports
+def initialize_face_detection():
+    mp_face_detection = mp.solutions.face_detection
+    return mp_face_detection.FaceDetection(min_detection_confidence=0.5)
+
+def get_face_embedding(face_detector, image):
+    """Get face embedding using MediaPipe Face Detection"""
+    # Convert to RGB if needed
+    if len(image.shape) == 3:
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    else:
+        rgb_image = image
+    
+    results = face_detector.process(rgb_image)
+    
+    if not results.detections:
+        return None
+    
+    # Get the first face detection
+    detection = results.detections[0]
+    
+    # Extract face landmarks as a simple feature vector
+    landmarks = detection.location_data.relative_keypoints
+    feature_vector = []
+    for landmark in landmarks:
+        feature_vector.extend([landmark.x, landmark.y])
+    
+    return np.array(feature_vector)
+
+def compare_face_embeddings(embedding1, embedding2, tolerance=0.6):
+    """Compare two face embeddings using Euclidean distance"""
+    if embedding1 is None or embedding2 is None:
+        return False
+    distance = np.linalg.norm(embedding1 - embedding2)
+    return distance < tolerance
 
 # Set page configuration
 st.set_page_config(
@@ -326,30 +362,12 @@ def process_uploaded_image(uploaded_file):
 def encode_face(image):
     if image is None:
         return None
+    
+    face_detector = initialize_face_detection()
+    return get_face_embedding(face_detector, image)
 
-    # Convert to RGB (if needed)
-    if len(image.shape) == 3 and image.shape[2] == 3:
-        if image.dtype == np.uint8:
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        else:
-            rgb_image = image
-    else:
-        rgb_image = image
-
-    # Find face locations
-    face_locations = face_recognition.face_locations(rgb_image)
-    if not face_locations:
-        return None
-
-    # Get face encodings
-    face_encodings = face_recognition.face_encodings(rgb_image, face_locations)
-    if not face_encodings:
-        return None
-
-    return face_encodings[0]
-
-def find_matching_face(face_encoding):
-    if face_encoding is None or not st.session_state.face_encodings:
+def find_matching_face(face_embedding):
+    if face_embedding is None or not st.session_state.face_encodings:
         return None
 
     # Get tolerance setting from database
@@ -358,10 +376,8 @@ def find_matching_face(face_encoding):
     result = c.fetchone()
     tolerance = float(result[0]) if result else 0.6
 
-    for patient_id, stored_encoding in st.session_state.face_encodings.items():
-        # Compare faces
-        results = face_recognition.compare_faces([stored_encoding], face_encoding, tolerance=tolerance)
-        if results[0]:
+    for patient_id, stored_embedding in st.session_state.face_encodings.items():
+        if compare_face_embeddings(stored_embedding, face_embedding, tolerance):
             return patient_id
 
     return None
