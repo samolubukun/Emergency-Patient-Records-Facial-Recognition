@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import cv2
-import mediapipe as mp
 import os
 import pickle
 import datetime
@@ -17,41 +16,50 @@ import plotly.express as px
 import plotly.graph_objects as go
 from streamlit_option_menu import option_menu
 
-# Add this new code after the imports
+# Replace the face detection functions with:
 def initialize_face_detection():
-    mp_face_detection = mp.solutions.face_detection
-    return mp_face_detection.FaceDetection(min_detection_confidence=0.5)
+    """Initialize OpenCV face detection"""
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    return face_cascade
 
 def get_face_embedding(face_detector, image):
-    """Get face embedding using MediaPipe Face Detection"""
-    # Convert to RGB if needed
+    """Get face embedding using OpenCV"""
+    if image is None:
+        return None
+        
+    # Convert to grayscale for face detection
     if len(image.shape) == 3:
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     else:
-        rgb_image = image
+        gray = image
     
-    results = face_detector.process(rgb_image)
-    
-    if not results.detections:
+    # Detect faces
+    faces = face_detector.detectMultiScale(gray, 1.1, 4)
+    if len(faces) == 0:
         return None
     
-    # Get the first face detection
-    detection = results.detections[0]
+    # Get the largest face
+    x, y, w, h = max(faces, key=lambda rect: rect[2] * rect[3])
     
-    # Extract face landmarks as a simple feature vector
-    landmarks = detection.location_data.relative_keypoints
-    feature_vector = []
-    for landmark in landmarks:
-        feature_vector.extend([landmark.x, landmark.y])
+    # Extract face ROI and resize
+    face_roi = gray[y:y+h, x:x+w]
+    face_roi = cv2.resize(face_roi, (128, 128))
     
-    return np.array(feature_vector)
-
+    # Flatten and normalize the face ROI
+    face_vector = face_roi.flatten() / 255.0
+    return face_vector
 def compare_face_embeddings(embedding1, embedding2, tolerance=0.6):
-    """Compare two face embeddings using Euclidean distance"""
+    """Compare two face embeddings using cosine similarity"""
     if embedding1 is None or embedding2 is None:
         return False
-    distance = np.linalg.norm(embedding1 - embedding2)
-    return distance < tolerance
+        
+    # Calculate cosine similarity
+    dot_product = np.dot(embedding1, embedding2)
+    norm1 = np.linalg.norm(embedding1)
+    norm2 = np.linalg.norm(embedding2)
+    similarity = dot_product / (norm1 * norm2)
+    
+    return similarity > tolerance
 
 # Set page configuration
 st.set_page_config(
