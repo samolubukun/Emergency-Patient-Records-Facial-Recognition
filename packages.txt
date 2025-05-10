@@ -1,1 +1,8 @@
+build-essential
+cmake
+libglib2.0-0
+libsm6
+libxrender1
+libxext6
+libboost-all-dev
 python3-opencv
