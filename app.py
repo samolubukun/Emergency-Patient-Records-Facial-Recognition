@@ -16,6 +16,45 @@ import plotly.express as px
 import plotly.graph_objects as go
 from streamlit_option_menu import option_menu
 
+# Set page configuration - this removes the default Streamlit title
+st.set_page_config(
+    page_title="",
+    page_icon="",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+# Read and encode the background image
+def set_background(image_file):
+    with open(image_file, "rb") as img_file:
+        encoded_string = base64.b64encode(img_file.read()).decode()
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url("data:image/jpg;base64,{encoded_string}");
+            background-size: cover;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Set the background
+set_background("background.jpg")
+
+
+# Hide the default Streamlit header and footer
+st.markdown("""
+<style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
 # Replace the face detection functions with:
 def initialize_face_detection():
     """Initialize OpenCV face detection"""
@@ -48,6 +87,7 @@ def get_face_embedding(face_detector, image):
     # Flatten and normalize the face ROI
     face_vector = face_roi.flatten() / 255.0
     return face_vector
+
 def compare_face_embeddings(embedding1, embedding2, tolerance=0.6):
     """Compare two face embeddings using cosine similarity"""
     if embedding1 is None or embedding2 is None:
@@ -61,13 +101,14 @@ def compare_face_embeddings(embedding1, embedding2, tolerance=0.6):
     
     return similarity > tolerance
 
-# Set page configuration
-st.set_page_config(
-    page_title="Medical Emergency Facial Recognition System",
-    page_icon="🏥",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Function to load and display the logo
+def load_logo():
+    try:
+        logo = Image.open("logo.jpg")
+        return logo
+    except FileNotFoundError:
+        st.warning("Logo file (logo.jpg) not found in the current directory.")
+        return None
 
 # Apply custom CSS for a sleek interface
 st.markdown("""
@@ -151,8 +192,43 @@ st.markdown("""
         border-radius: 5px;
         margin-bottom: 1rem;
     }
+    .app-header {
+        display: flex;
+        align-items: center;
+        background-color: #4e8df5;
+        color: white;
+        padding: 1rem;
+        border-radius: 5px;
+        margin-bottom: 1.5rem;
+    }
+    .logo-img {
+        width: 80px;
+        margin-right: 15px;
+    }
+    .title-text {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin: 0;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# Load the logo
+logo = load_logo()
+
+# Create a custom header with logo and title
+header_container = st.container()
+with header_container:
+    if logo:
+        st.markdown(
+            f"""
+            <div class="app-header">
+                <img src="data:image/jpeg;base64,{base64.b64encode(open('logo.jpg', 'rb').read()).decode()}" class="logo-img">
+                <h1 class="title-text">Medical Emergency Facial Recognition System</h1>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 # Database setup
 def setup_database():
@@ -650,7 +726,6 @@ def get_system_stats():
 
 # Login Management
 def login_form():
-    st.markdown("<div class='styled-header'><h1>🏥 Medical Emergency Facial Recognition System</h1></div>", unsafe_allow_html=True)
     
     col1, col2 = st.columns([3, 2])
     
@@ -670,7 +745,7 @@ def login_form():
         </div>
         """, unsafe_allow_html=True)
         
-        st.image("https://img.freepik.com/free-vector/doctor-nurse-giving-medical-care-patient_74855-7882.jpg", use_column_width=True)
+        st.image("https://img.freepik.com/free-vector/doctor-nurse-giving-medical-care-patient_74855-7882.jpg", use_container_width=True)
     
     with col2:
         st.markdown("<h2>User Login</h2>", unsafe_allow_html=True)
@@ -1467,7 +1542,7 @@ def logout():
     st.session_state.user_role = None
     st.session_state.login_time = None
     st.success("You have been logged out successfully.")
-    st.experimental_rerun()
+    st.rerun()
 
 def main():
     # Check if user is authenticated
